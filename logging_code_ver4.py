@@ -68,9 +68,8 @@ h3r= []
 h4r = []
 mw  = []
 mr = [] 
-pw = []
-pw2 =[]
-pr =[]
+power_w = []
+power_r =[]
 copw = []
 copw2 =[] 
 copr = []
@@ -78,19 +77,20 @@ wc = []
 pdraw = [] #power drawn by system
 h1satT =[]
 h1satP =[]
+p4 =[]
 
 for i in range(700):
     #calculate enthalpies using coolprop
-    h1w.append(cp.PropsSI ('H','T',T1w[i],'Q',0.0,"Water")) 
-    h2w.append(cp.PropsSI ('H','T',T2w[i],'Q',0.0,"Water"))
     hdifw.append(4200*(T2w[i]-T1w[i]))
 
     h1r.append(cp.PropsSI ('H','P|gas', p1[i] ,'T',T1r[i],"R134a")) # using t and p here gives sevrely oscillating values of h1 
+    #h1r.append(cp.PropsSI ('H','P', p1[i] ,'T',T1r[i],"R134a"))
     h1satT.append(cp.PropsSI ('H','Q', 1,'T',T1r[i],"R134a"))
     h1satP.append(cp.PropsSI ('H','Q', 1,'P',p1[i],"R134a"))
     h2r.append(cp.PropsSI ('H','T',T2r[i],'P',p2[i],"R134a"))
-    h3r.append(cp.PropsSI ('H','T',T3r[i],'P',p2[i],"R134a")) # currently assuming no pressure drop through condenser, will need to deal with this 
-    h4 = h3r[i]
+    h3r.append(cp.PropsSI ('H','T',T3r[i],'P',p2[i]*0.9,"R134a")) 
+    #factor in p loss across condensor, this has little effect, reduces cp by absolute value of 0.01 
+    p4.append(cp.PropsSI('P','T',T4r[i],'Q',0.05,"R134a")) # calculate p4 
 
 
     pdraw.append(I[i]*240)
@@ -98,17 +98,14 @@ for i in range(700):
     mw.append(qw[i]/60) # calculate water mass flow (assume rho = 1000)
     mr.append(pdraw[i]/(h2r[i]-h1r[i])) # this does not take into account the fan, the actual power drawn by the compressor will be lower 
 
-    pw.append(mw[i]*(hdifw[i])) # calculate power output base on enthalpy gained by water
-    pw2.append(mw[i]*(h2w[i]-h1w[i]))
-    pr.append(mr[i]*(h2r[i]-h3r[i])) #calculate power output based on enthalpy lost by refrigerant 
-    copw.append(pw[i]/pdraw[i]) #calculate COP
-    copw2.append(pw2[i]/pdraw[i])
-    copr.append(pr[i]/pdraw[i])
+    power_w.append(mw[i]*(hdifw[i])) # calculate power output base on enthalpy gained by water
+    power_r.append(mr[i]*(h2r[i]-h3r[i])) #calculate power output based on enthalpy lost by refrigerant 
+    copw.append(power_w[i]/pdraw[i]) #calculate COP
+    copr.append(power_r[i]/pdraw[i])
 
 
-prav = st.mean(pr)
+power_rav = st.mean(power_r)
 copw_av = st.mean(copw)
-copw_av2 = st.mean(copw2)
 copr_av = st.mean(copr)
 
 T2w = np.array(T2w)
@@ -117,11 +114,13 @@ h2r = np.array(h2r)
 h1r = np.array(h1r)
 h1satT = np.array(h1satT) 
 p1 = np.array(p1)
-print("COP Based on water", copw_av, copw_av2 )
+print("COP Based on water", copw_av )
 print("COP Based on Refrigerant", copr_av )
-print(st.mean(mr))
+print('p4 =',st.mean(p4)/10**5, 'p1=', st.mean(p1)/10**5)
+hex_p_loss = (st.mean(p4)/10**5 - st.mean(p1)/10**5)/(st.mean(p1)/10**5)
+print('Pressure loss across Heat Exchanger =', hex_p_loss *100, '%')
 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-ax1.plot(tim[0:700], p1[0:700]/1000)
+ax1.plot(tim[0:700], p1[0:700]/100000)
 ax1.set_title('Compressor Inlet Pressure')
 ax1.set_xlabel('Time')
 ax1.set_ylabel('Pressure (bar)')

@@ -76,6 +76,8 @@ copw2 =[]
 copr = []
 wc = []
 pdraw = [] #power drawn by system
+h1satT =[]
+h1satP =[]
 
 for i in range(700):
     #calculate enthalpies using coolprop
@@ -83,7 +85,9 @@ for i in range(700):
     h2w.append(cp.PropsSI ('H','T',T2w[i],'Q',0.0,"Water"))
     hdifw.append(4200*(T2w[i]-T1w[i]))
 
-    h1r.append(cp.PropsSI ('H','Q', 1.0,'T',T1r[i],"R134a")) # using t and p here gives sevrely oscillating values of h1 
+    h1r.append(cp.PropsSI ('H','P|gas', p1[i] ,'T',T1r[i],"R134a")) # using t and p here gives sevrely oscillating values of h1 
+    h1satT.append(cp.PropsSI ('H','Q', 1,'T',T1r[i],"R134a"))
+    h1satP.append(cp.PropsSI ('H','Q', 1,'P',p1[i],"R134a"))
     h2r.append(cp.PropsSI ('H','T',T2r[i],'P',p2[i],"R134a"))
     h3r.append(cp.PropsSI ('H','T',T3r[i],'P',p2[i],"R134a")) # currently assuming no pressure drop through condenser, will need to deal with this 
     h4 = h3r[i]
@@ -111,11 +115,25 @@ T2w = np.array(T2w)
 T1w = np.array(T1w)
 h2r = np.array(h2r)
 h1r = np.array(h1r)
-
+h1satT = np.array(h1satT) 
+p1 = np.array(p1)
 print("COP Based on water", copw_av, copw_av2 )
 print("COP Based on Refrigerant", copr_av )
 print(st.mean(mr))
-#plt.plot(p1)
-#plt.plot(p2)
-plt.plot(h2r-h1r)
+fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+ax1.plot(tim[0:700], p1[0:700]/1000)
+ax1.set_title('Compressor Inlet Pressure')
+ax1.set_xlabel('Time')
+ax1.set_ylabel('Pressure (bar)')
+ax2.plot(tim[0:700], T1r[0:700])
+ax2.set_title('Compressor Inlet Temprature')
+ax2.set_xlabel('Time')
+ax2.set_ylabel('Temperature (K)')
+ax3.plot(tim[0:700], h1r[0:700]/1000)
+ax3.plot(tim[0:700], h1satT[0:700]/1000)
+ax3.set_xlabel('Time')
+ax3.set_ylabel('specific Enthalpy (kJ/kg)')
+ax3.set_title('Compressor Inlet Enthalpy vs Saturation')
+#ax3.legend('H1 calaculated from T, P', 'H1sat calculated from measured T', 'H1sat calculated from measured P' )
+
 plt.show()

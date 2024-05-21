@@ -21,8 +21,7 @@ p2 = []
 I = []
 qw= []
 #pick the text file to use
-file_name = "Max fan, max mass flow"
-
+file_name = 'NEW max mass, max flow, very first run'
 #add values from files to list 
 
 try:
@@ -142,20 +141,20 @@ for i in range(len(T1w)):
     # calculating air mass flow rate 
     ma.append(mr[i]*(h4r[i] - h1r[i])/(1005*(T2a[i] - T1a[i])))
 
-
+evap_p_loss = (st.mean(p4)/10**5 - st.mean(p1)/10**5)/(st.mean(p4)/10**5)
 #looking at irreversible entropy generation and pressure losses.
 for i in range(len(T1w)):
-    s3r.append(cp.PropsSI ('S','T',T3r[i],'Q',0,"R134a"))
+    s3r.append(cp.PropsSI ('S','T',T3r[i],'Q',0,"R134a"))  
     s2r.append(cp.PropsSI ('S','T',T2r[i],'P',p2[i],"R134a"))
     s1r.append(cp.PropsSI ('S','P|gas', p1[i] ,'T',T1r[i],"R134a"))
-    s4r.append(cp.PropsSI ('S','P', p1[i] ,'T',T4r[i],"R134a"))
+    s4r.append(cp.PropsSI ('S','P', p4[i] ,'H',h4r[i],"R134a"))
     p3r.append(cp.PropsSI ('P','Q',0.0 ,'T',T3r[i],"R134a"))
     p3r_loss.append(p2[i] - p3r[i])
     irr_gen_comp.append(s2r[i] - s1r[i])
     irr_gen_throttle.append(s4r[i] - s3r[i])
 
 
-evap_p_loss = (st.mean(p4)/10**5 - st.mean(p1)/10**5)/(st.mean(p4)/10**5)
+
 cond_p_loss = st.mean(p3r_loss)/st.mean(p2)
 ma_av = st.mean(ma)
 irr_gen_comp_av = st.mean(irr_gen_comp)

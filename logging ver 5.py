@@ -21,7 +21,7 @@ p2 = []
 I = []
 qw= []
 #pick the text file to use
-file_name = "Max flow, fan 2.5"
+file_name = "Max fan, max mass flow"
 
 #add values from files to list 
 
@@ -69,23 +69,26 @@ hdifw = []
 h1r = []
 h2r = []
 h3r= []
+h3r_dry01 =[]
+h3r_no_p_loss =[]
 h4r = []
 mw  = []
 mr = [] 
 mr_dry01 =[]
+mr_no_p_loss =[]
 ma = []
 power_w = []
 pw2 =[]
 power_r =[]
 power_r_dry01 =[]
 copw = []
-copw2 =[] 
 copr = []
 wc = []
 power_draw = [] # power drawn by system
 power_draw_compressor = [] # power drawn by compressor
 copr2 = []
-copr_no_p_loss = []
+copr_dry01 = []
+copr_no_p_loss =[]
 s4r = []
 s3r = []
 s2r = []
@@ -97,10 +100,10 @@ irr_gen_evap = []
 p3r = []
 p3r_loss = []
 h2r_s =[]
-eta_c =[]
+eta_c =[] # isentropic compressor effenciency
 s1 = []
 s2 =[]
-h3r_dry01 =[]
+
 p4 = []
 
 for i in range(len(T1w)):
@@ -108,31 +111,34 @@ for i in range(len(T1w)):
     hdifw.append(4200*(T2w[i]-T1w[i]))
     
     h1r.append(cp.PropsSI ('H','P|gas', p1[i] ,'T',T1r[i],"R134a")) # using t and p here gives sevrely oscillating values of h1 
+    #h1r.append(cp.PropsSI ('H','P', p1[i] ,'T',T1r[i],"R134a"))
     s1.append(cp.PropsSI('S', 'P|gas', p1[i] ,'T',T1r[i],"R134a"))
     h2r.append(cp.PropsSI ('H','T',T2r[i],'P',p2[i],"R134a"))
-    h2r_s.append(cp.PropsSI('H', 'P', p2[i] ,'S',s1[i],"R134a"))
+    h2r_s.append(cp.PropsSI('H', 'P', p2[i] ,'S',s1[i],"R134a")) #t2 strongly correlated with h2 so need to use pressure for isentropic efficiency
     s2.append(cp.PropsSI ('S','T',T2r[i],'P',p2[i],"R134a"))
     eta_c.append((h2r_s[i]-h1r[i])/(h2r[i]-h1r[i]))
     h3r.append(cp.PropsSI ('H','T',T3r[i],'Q',0.0,"R134a")) # assuming wet saturated on exit from the condenser
     h3r_dry01.append(cp.PropsSI ('H','T',T3r[i],'Q',0.1,"R134a")) #Assuming dryness fraction of 0.1 at condenser exit
+    h3r_no_p_loss.append(cp.PropsSI ('H','T',T3r[i],'P',p2[i],"R134a")) #assuming no pressure loss across condenser
     h4r.append(h3r[i])
     
-    power_draw.append(I[i]*244.5*0.98)
+    power_draw.append(I[i]*245*0.98)
      # now only considering compressor work and using power factor
 
     mw.append(qw[i]/60) # calculate water mass flow (assume rho = 1000)
-    mr.append((mw[i]*hdifw[i])/((h2r[i]-h3r[i]))) # 0.97 for percentage of enthalpy transferred from refrigerant to water
-    mr_dry01.append((mw[i]*hdifw[i])/((h2r[i]-h3r_dry01[i])))
-    power_draw_compressor.append((h2r[i]-h1r[i])*mr[i])
+    mr.append((mw[i]*hdifw[i])/((h2r[i]-h3r[i]))) # assuming adiabtic condensor 
+    mr_dry01.append((mw[i]*hdifw[i])/((h2r[i]-h3r_dry01[i]))) #assuminf adiabatic condensor 
+    power_draw_compressor.append((h2r[i]-h1r[i])*mr[i]) 
     power_w.append(mw[i]*(hdifw[i])) # calculate heat output base on enthalpy gained by water
-    power_r.append(mr[i]*(h2r[i]-h3r[i]))#
-    power_r_dry01.append(mr[i]*(h2r[i]-h3r_dry01[i]))
+    #power_r.append(mr[i]*(h2r[i]-h3r[i]))#
+    #power_r_dry01.append(mr[i]*(h2r[i]-h3r_dry01[i]))
     copw.append(power_w[i]/power_draw[i]) #calculate COP based on water
-    p4.append(cp.PropsSI('P','T',T4r[i],'Q',0.05,"R134a")) #calculate p4 
+    p4.append(cp.PropsSI('P','T',T4r[i],'Q',0.0,"R134a")) #calculate p4, will be in 2 phase region 
 
     #copr.append(pr[i]/pdraw[i])
     copr2.append((h2r[i] - h3r[i])/(h2r[i] - h1r[i])) #calculating COP purely thermodynamically
-    copr_no_p_loss.append((h2r[i] - h3r_dry01[i])/(h2r[i] - h1r[i]))
+    copr_dry01.append((h2r[i] - h3r_dry01[i])/(h2r[i] - h1r[i])) 
+    copr_no_p_loss.append((h2r[i] - h3r_no_p_loss[i])/(h2r[i] - h1r[i])) 
     # calculating air mass flow rate 
     ma.append(mr[i]*(h4r[i] - h1r[i])/(1005*(T2a[i] - T1a[i])))
 
@@ -149,13 +155,15 @@ for i in range(len(T1w)):
     irr_gen_throttle.append(s4r[i] - s3r[i])
 
 
-evap_p_loss = (st.mean(p4)/10**5 - st.mean(p1)/10**5)/(st.mean(p1)/10**5)
+evap_p_loss = (st.mean(p4)/10**5 - st.mean(p1)/10**5)/(st.mean(p4)/10**5)
+cond_p_loss = st.mean(p3r_loss)/st.mean(p2)
 ma_av = st.mean(ma)
 irr_gen_comp_av = st.mean(irr_gen_comp)
 irr_gen_throttle_av = st.mean(irr_gen_throttle)
 p3r_loss_av = st.mean(p3r_loss)
 copw_av = st.mean(copw)
-copr_no_p_loss = st.mean(copr_no_p_loss)
+copr_dry01_av = st.mean(copr_dry01)
+copr_no_p_loss_av = st.mean(copr_no_p_loss)
 copr2_av = st.mean(copr2)
 eta_c_av = st.mean(eta_c)
 
@@ -169,22 +177,23 @@ power_comp_frac = st.mean(power_draw_compressor)/st.mean(power_draw)
 # Data for the table
 table_data = [
     ["Calculated mass flow rate of air through evaporator (kg/s)", ma_av],
-    ["Pressure of refrigerant lost in the condensor(bar)", p3r_loss_av / 1e5],
+    ["Percentge pressure loss of refrigerant lost in the condensor(%)", cond_p_loss*100],
     ["Irreversible entropy generation due to compressor (J/kgK)", irr_gen_comp_av],
     ["Irreversible entropy generation due to throttle (J/kgK)", irr_gen_throttle_av],
     ["COP Based on water", copw_av],
-    ["COP Based on Refrigerant", copr2_av],
-    ["COP Based on Refrigerant assuming no condensor pressure loss", copr_no_p_loss],
-    ['Power ouptut based on water (kW)' , st.mean(power_w)],
-    ['Power output based on refrigerant (kW)', st.mean(power_r)],
-    ['Percentage of Power Draw by Compressor', power_comp_frac],
+    ["COP Based on Refrigerantassuming sat liquid @3", copr2_av],
+    ["COP Based on Refrigerant assuming dryness 0.1@3", copr_dry01_av],
+    ["COP Based on Refrigerant assuming no pressure loss", copr_no_p_loss_av],
+    #['Power ouptut based on water (kW)' , st.mean(power_w)],
+    #['Power output based on refrigerant (kW)', st.mean(power_r)],
+    #['Percentage of Power Draw by Compressor (%)', power_comp_frac*100],
     ['Compressor Isentropic Efficiency', eta_c_av],
     ['Refrigerant mass flow assuming sat liquid @3', st.mean(mr)],
-    ['Refrigerant mass flow assuming no condenser pressure loss', st.mean(mr_dry01)],
+    ['Refrigerant mass flow assuming dryness 0.1@3', st.mean(mr_dry01)],
     ['Water volumetric flow rate', st.mean(qw)],
     ['Water mass flow rate', st.mean(mw)],
-    ['Average T2w', st.mean(T2w)-273.15]
-    ['Evaporator Pressure loss', evap_p_loss*100, '%']
+    ['Average T2w', st.mean(T2w)-273.15],
+    ['Percentage pressure loss in the evaporator (%)', evap_p_loss*100]
     
 ]
 
